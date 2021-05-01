@@ -1,0 +1,50 @@
+require 'rake/clean'
+require 'sassc'
+require 'slim'
+
+def write(filename)
+  File.open(filename, 'w') do |f|
+    f.write(yield)
+  end
+end
+
+def render_slim(template, page)
+  scope = {}
+  rendered_page = Slim::Template.new(page).render(scope)
+  Slim::Template.new(template).render(scope) do
+    rendered_page
+  end
+end
+
+# Rake.application.options.trace_rules = true
+
+directory 'dist'
+CLEAN << 'dist'
+
+task default: 'dist/main.css'
+file 'dist/main.css' => FileList['sass/main.sass', 'sass/*.sass', 'dist'] do |t|
+  puts "SASS: #{t.name}"
+  write(t.name) do
+    SassC::Engine.new(File.read(t.source),
+                      syntax: :sass,
+                      load_paths: ['sass'])
+                 .render
+  end
+end
+
+task default: FileList['pages/*.slim'].pathmap('dist/%n')
+rule '.html' => ->(f) { [f.pathmap('pages/%f.slim'), 'dist'] } do |t|
+  puts "Slim: #{t.name}"
+  write(t.name) do
+    render_slim('templates/main.html.slim', t.source)
+  end
+end
+
+ASSETS = FileList['images/*']
+ASSETS.each do |asset|
+  directory asset.pathmap('dist/%d')
+  file asset.pathmap('dist/%p') => [asset, asset.pathmap('dist/%d')] do |t|
+    cp t.source, t.name
+  end
+end
+task default: ASSETS.pathmap('dist/%p')

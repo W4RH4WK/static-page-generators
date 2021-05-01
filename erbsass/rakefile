@@ -1,0 +1,24 @@
+require 'rake/clean'
+
+# Rake.application.options.trace_rules = true
+
+directory 'dist'
+CLEAN << 'dist'
+
+file 'dist/main.css' => FileList['sass/main.sass', 'sass/*.sass', 'dist'] do |t|
+  sh "sassc --style compressed #{t.prerequisites[0]} #{t.name}"
+end
+
+task default: FileList['pages/*.erb'].pathmap('dist/%n')
+rule '.html' => ->(f) { [f.pathmap('pages/%f.erb'), 'dist'] } do |t|
+  sh "erb page=#{t.source} templates/main.html.erb >#{t.name}"
+end
+
+ASSETS = FileList['images/*']
+ASSETS.each do |asset|
+  directory asset.pathmap('dist/%d')
+  file asset.pathmap('dist/%p') => [asset, asset.pathmap('dist/%d')] do |t|
+    cp t.source, t.name
+  end
+end
+task default: ASSETS.pathmap('dist/%p')

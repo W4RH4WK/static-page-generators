@@ -1,0 +1,9 @@
+<% main = ERB.new(File.read(page), eoutvar:'main').result %>
+<html>
+<head>
+  <title><%= @title ? "#{@title} - " : "" %>ERB Test</title>
+</head>
+<body>
+  <%= main %>
+</body>
+</html>
